@@ -1,55 +1,51 @@
 # utils/gemini.py
 import os
 import streamlit as st
+from google.oauth2 import service_account
 import google.generativeai as genai
+import json
 
 def configurar_gemini():
-    """Configura a API do Google Gemini"""
+    """Configura a API do Google Gemini usando conta de serviço"""
     
-    chave = None
-    
-    # ===== TENTAR DIFERENTES FONTES =====
-    
-    # 1. Tentar st.secrets (Streamlit Cloud)
+    # Tentar carregar do st.secrets (Streamlit Cloud)
     try:
-        # Verificar se st.secrets existe e tem a chave
-        if hasattr(st, 'secrets'):
-            if 'GEMINI_API_KEY' in st.secrets:
-                chave = st.secrets['GEMINI_API_KEY']
-                print("🔑 Chave encontrada no st.secrets")  # Log para debug
+        chave_privada = st.secrets.get('GEMINI_PRIVATE_KEY')
+        if chave_privada:
+            # Construir o dicionário de credenciais
+            credenciais_dict = {
+                "type": "service_account",
+                "project_id": "projetogemini-499821",
+                "private_key_id": "35c65a5d27580888557e19357c550a16342cf678",
+                "private_key": chave_privada,
+                "client_email": "gemini-service@projetogemini-499821.iam.gserviceaccount.com",
+                "client_id": "116849209168678683587",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/gemini-service%40projetogemini-499821.iam.gserviceaccount.com",
+                "universe_domain": "googleapis.com"
+            }
+        else:
+            raise ValueError("GEMINI_PRIVATE_KEY não encontrado nos secrets")
     except Exception as e:
-        print(f"Erro ao acessar st.secrets: {e}")
-    
-    # 2. Se não encontrou, tentar variável de ambiente
-    if not chave:
-        chave = os.getenv('GEMINI_API_KEY')
-        if chave:
-            print("🔑 Chave encontrada no os.environ")
-    
-    # 3. Se ainda não encontrou, tentar ler arquivo .env manualmente
-    if not chave:
+        # Fallback local
         try:
-            from dotenv import load_dotenv
-            load_dotenv()
-            chave = os.getenv('GEMINI_API_KEY')
-            if chave:
-                print("🔑 Chave encontrada no .env")
+            with open('projetogemini-499821-35c65a5d2758.json', 'r') as f:
+                credenciais_dict = json.load(f)
         except:
-            pass
+            raise ValueError(f"Arquivo de credenciais não encontrado: {e}")
     
-    # ===== VERIFICAR SE ENCONTROU =====
-    if not chave:
-        raise ValueError("""
-        Chave do Gemini não encontrada!
-        
-        Verifique:
-        1. No Streamlit Cloud: Settings > Secrets
-        2. Localmente: arquivo .env com GEMINI_API_KEY
-        """)
-    
-    # ===== CONFIGURAR E RETORNAR =====
-    genai.configure(api_key=chave)
-    return genai.GenerativeModel('gemini-1.5-flash')
+    # Criar credenciais
+    try:
+        credentials = service_account.Credentials.from_service_account_info(
+            credenciais_dict,
+            scopes=['https://www.googleapis.com/auth/cloud-platform']
+        )
+        genai.configure(credentials=credentials)
+        return genai.GenerativeModel('gemini-1.5-flash')
+    except Exception as e:
+        raise ValueError(f"Erro ao configurar Gemini: {str(e)}")
 
 def responder_pergunta(pergunta, dados):
     """Responde uma pergunta usando Gemini"""
@@ -57,7 +53,7 @@ def responder_pergunta(pergunta, dados):
     try:
         modelo = configurar_gemini()
     except Exception as e:
-        return f"❌ Erro de configuracao: {str(e)}"
+        return f"❌ Erro de configuração: {str(e)}"
     
     # Converter estágios para string
     estagios = [str(estagio) for estagio in dados['Stage'].unique()]
