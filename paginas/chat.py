@@ -7,23 +7,23 @@ def mostrar(dados):
     st.header("Chat com o Mundo Digital (Google Gemini)")
     
     # ===== DIAGNÓSTICO =====
-    # Verificar se a chave está sendo carregada
-    with st.expander("🔧 Diagnóstico (clique para ver)"):
+    with st.expander("🔧 Diagnóstico da Conexão (clique para ver)"):
         try:
-            # Tentar pegar a chave
             chave = None
             if hasattr(st, 'secrets') and 'GEMINI_API_KEY' in st.secrets:
                 chave = st.secrets['GEMINI_API_KEY']
                 st.success(f"✅ Chave encontrada no st.secrets: {chave[:10]}...")
             else:
                 st.warning("⚠️ Chave NÃO encontrada no st.secrets")
-                
-            # Mostrar o conteúdo dos secrets (sem expor a chave completa)
-            if hasattr(st, 'secrets'):
-                st.write("Keys disponíveis nos secrets:", list(st.secrets.keys()) if st.secrets else "Nenhum")
-            else:
-                st.write("st.secrets não está disponível")
-                
+                # Tenta carregar do .env como fallback
+                import os
+                from dotenv import load_dotenv
+                load_dotenv()
+                chave = os.getenv('GEMINI_API_KEY')
+                if chave:
+                    st.info(f"ℹ️ Chave carregada do .env local: {chave[:10]}...")
+                else:
+                    st.error("❌ Nenhuma chave encontrada em lugar nenhum!")
         except Exception as e:
             st.error(f"Erro no diagnóstico: {e}")
     

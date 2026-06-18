@@ -11,9 +11,7 @@ if os.path.exists('.env'):
 def configurar_gemini():
     """Configura a API do Google Gemini com a chave do ambiente ou secrets"""
     
-    # Tenta pegar a chave de diferentes fontes
     chave = None
-    
     # 1. Tentar pegar do st.secrets (Streamlit Cloud)
     try:
         if hasattr(st, 'secrets') and 'GEMINI_API_KEY' in st.secrets:
@@ -28,8 +26,11 @@ def configurar_gemini():
     if not chave:
         raise ValueError("Chave do Gemini nao encontrada. Configure o arquivo .env ou os secrets do Streamlit")
     
+    # Configuração explícita para usar a chave de API
     genai.configure(api_key=chave)
-    return genai.GenerativeModel('gemini-2.5-flash')
+    
+    # Usando um modelo estável e amplamente disponível
+    return genai.GenerativeModel('gemini-2.0-flash')
 
 def responder_pergunta(pergunta, dados):
     """Responde uma pergunta usando Gemini com contexto dos dados"""
