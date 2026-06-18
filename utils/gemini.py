@@ -1,15 +1,33 @@
 # utils/gemini.py
 import os
+import streamlit as st
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-load_dotenv()
+# Carregar .env apenas se estiver rodando localmente
+if os.path.exists('.env'):
+    load_dotenv()
 
 def configurar_gemini():
-    """Configura a API do Google Gemini com a chave do arquivo .env"""
-    chave = os.getenv('GEMINI_API_KEY')
+    """Configura a API do Google Gemini com a chave do ambiente ou secrets"""
+    
+    # Tenta pegar a chave de diferentes fontes
+    chave = None
+    
+    # 1. Tentar pegar do st.secrets (Streamlit Cloud)
+    try:
+        if hasattr(st, 'secrets') and 'GEMINI_API_KEY' in st.secrets:
+            chave = st.secrets['GEMINI_API_KEY']
+    except:
+        pass
+    
+    # 2. Se não tiver no secrets, tentar do .env (local)
     if not chave:
-        raise ValueError("Chave do Gemini nao encontrada. Configure o arquivo .env")
+        chave = os.getenv('GEMINI_API_KEY')
+    
+    if not chave:
+        raise ValueError("Chave do Gemini nao encontrada. Configure o arquivo .env ou os secrets do Streamlit")
+    
     genai.configure(api_key=chave)
     return genai.GenerativeModel('gemini-2.5-flash')
 
@@ -21,10 +39,9 @@ def responder_pergunta(pergunta, dados):
     except Exception as e:
         return f"Erro de configuracao: {str(e)}"
     
-    # Converter todos os estágios para string antes de juntar
+    # Converter estágios para string
     estagios = [str(estagio) for estagio in dados['Stage'].unique()]
     
-    # Preparar o contexto
     contexto = f"""
     Voce e um assistente especialista em Digimon.
     Responda de forma clara e objetiva.

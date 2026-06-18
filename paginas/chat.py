@@ -6,6 +6,27 @@ def mostrar(dados):
     """Mostra o chat com respostas usando a IA do Google Gemini"""
     st.header("Chat com o Mundo Digital (Google Gemini)")
     
+    # ===== DIAGNÓSTICO =====
+    # Verificar se a chave está sendo carregada
+    with st.expander("🔧 Diagnóstico (clique para ver)"):
+        try:
+            # Tentar pegar a chave
+            chave = None
+            if hasattr(st, 'secrets') and 'GEMINI_API_KEY' in st.secrets:
+                chave = st.secrets['GEMINI_API_KEY']
+                st.success(f"✅ Chave encontrada no st.secrets: {chave[:10]}...")
+            else:
+                st.warning("⚠️ Chave NÃO encontrada no st.secrets")
+                
+            # Mostrar o conteúdo dos secrets (sem expor a chave completa)
+            if hasattr(st, 'secrets'):
+                st.write("Keys disponíveis nos secrets:", list(st.secrets.keys()) if st.secrets else "Nenhum")
+            else:
+                st.write("st.secrets não está disponível")
+                
+        except Exception as e:
+            st.error(f"Erro no diagnóstico: {e}")
+    
     st.markdown("""
     **Assistente Digimon IA com Google Gemini**
     
@@ -31,7 +52,7 @@ def mostrar(dados):
         1. Criar uma conta Google
         2. Acessar o Google AI Studio: https://aistudio.google.com/
         3. Gerar uma chave de API
-        4. Adicionar a chave no arquivo `.env` (GEMINI_API_KEY)
+        4. Adicionar a chave no arquivo `.env` (local) ou nos secrets do Streamlit (cloud)
         """)
     
     pergunta = st.text_input("Faca sua pergunta sobre Digimons:", placeholder="Ex: Qual o Digimon mais forte?")
@@ -44,6 +65,6 @@ def mostrar(dados):
                     st.success("Resposta da IA Gemini:")
                     st.write(resposta)
             else:
-                st.error("A IA Gemini não está configurada. Adicione a chave no arquivo `.env`.")
+                st.error("A IA Gemini não está configurada. Verifique o diagnóstico acima.")
         else:
             st.warning("Digite uma pergunta primeiro.")
