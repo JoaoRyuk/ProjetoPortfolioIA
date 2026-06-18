@@ -1,52 +1,89 @@
 # paginas/chat.py
 import streamlit as st
-from utils.gemini import configurar_gemini, responder_pergunta
 
 def mostrar(dados):
-    st.header("Chat com o Mundo Digital (Google Gemini)")
-    
-    # ===== DIAGNÓSTICO =====
-    with st.expander("🔧 Diagnóstico da Conexão"):
-        try:
-            chave = None
-            if hasattr(st, 'secrets') and 'GEMINI_API_KEY' in st.secrets:
-                chave = st.secrets['GEMINI_API_KEY']
-                st.success(f"✅ Chave encontrada no st.secrets: {chave[:10]}...")
-            else:
-                st.warning("⚠️ Chave NÃO encontrada no st.secrets")
-                import os
-                chave = os.getenv('GEMINI_API_KEY')
-                if chave:
-                    st.info(f"ℹ️ Chave carregada do .env: {chave[:10]}...")
-                else:
-                    st.error("❌ Nenhuma chave encontrada!")
-        except Exception as e:
-            st.error(f"Erro no diagnóstico: {e}")
+    """Mostra o chat com respostas inteligentes baseadas nos dados"""
+    st.header("Chat com o Mundo Digital")
     
     st.markdown("""
-    **Assistente Digimon IA com Google Gemini**
+    **Assistente Digimon IA**
     
-    Faça perguntas sobre Digimons e a IA do Google vai responder.
+    Faca perguntas sobre os Digimons e o assistente vai responder com base nos dados.
+    
+    **Exemplos:**
+    - "Quais sao os Digimons mais fortes?"
+    - "Me fale sobre o Agumon"
+    - "Qual a media de ataque?"
     """)
     
-    # Verifica se a chave está disponível
-    try:
-        chave = configurar_gemini()
-        ia_disponivel = True
-        st.success("✅ Chave configurada com sucesso!")
-    except Exception as e:
-        ia_disponivel = False
-        st.error(f"❌ Erro: {e}")
-    
-    pergunta = st.text_input("Faça sua pergunta:", placeholder="Ex: Qual o Digimon mais forte?")
+    pergunta = st.text_input("Faca sua pergunta:", placeholder="Ex: Qual o Digimon mais forte?")
     
     if st.button("Perguntar"):
-        if pergunta and ia_disponivel:
-            with st.spinner("Consultando..."):
-                resposta = responder_pergunta(pergunta, dados)
-                st.success("Resposta:")
-                st.write(resposta)
-        elif not ia_disponivel:
-            st.error("❌ Chave não disponível. Verifique o diagnóstico.")
+        if pergunta:
+            with st.spinner("Analisando os dados..."):
+                pergunta_lower = pergunta.lower()
+                
+                if "forte" in pergunta_lower or "ataque" in pergunta_lower:
+                    top = dados.nlargest(5, 'ATK lvl 50')[['Digimon', 'Stage', 'ATK lvl 50']]
+                    resposta = "**Os Digimons com maior ataque sao:**\n\n"
+                    for i, (_, row) in enumerate(top.iterrows(), 1):
+                        resposta += f"{i}. **{row['Digimon']}** ({row['Stage']}) - {int(row['ATK lvl 50'])} de ataque\n"
+                    st.info(resposta)
+                
+                elif "rapido" in pergunta_lower or "velocidade" in pergunta_lower:
+                    top = dados.nlargest(5, 'SPD lvl 50')[['Digimon', 'Stage', 'SPD lvl 50']]
+                    resposta = "**Os Digimons mais rapidos sao:**\n\n"
+                    for i, (_, row) in enumerate(top.iterrows(), 1):
+                        resposta += f"{i}. **{row['Digimon']}** ({row['Stage']}) - {int(row['SPD lvl 50'])} de velocidade\n"
+                    st.info(resposta)
+                
+                elif "defesa" in pergunta_lower:
+                    top = dados.nlargest(5, 'DEF lvl 50')[['Digimon', 'Stage', 'DEF lvl 50']]
+                    resposta = "**Os Digimons com maior defesa sao:**\n\n"
+                    for i, (_, row) in enumerate(top.iterrows(), 1):
+                        resposta += f"{i}. **{row['Digimon']}** ({row['Stage']}) - {int(row['DEF lvl 50'])} de defesa\n"
+                    st.info(resposta)
+                
+                elif "agumon" in pergunta_lower:
+                    agumon = dados[dados['Digimon'].str.contains('Agumon', case=False)]
+                    if not agumon.empty:
+                        row = agumon.iloc[0]
+                        st.info(f"""
+                        **Sobre o Agumon:**
+                        - Estagio: {row['Stage']}
+                        - Ataque: {int(row['ATK lvl 50'])}
+                        - Defesa: {int(row['DEF lvl 50'])}
+                        - Inteligencia: {int(row['INT lvl 50'])}
+                        - Velocidade: {int(row['SPD lvl 50'])}
+                        - Tipo: {row['Type']}
+                        - Atributo: {row['Attribute']}
+                        """)
+                    else:
+                        st.info("Agumon nao encontrado no dataset.")
+                
+                elif "media" in pergunta_lower:
+                    st.info(f"""
+                    **Medias de todos os Digimons:**
+                    - Ataque: {int(dados['ATK lvl 50'].mean())}
+                    - Defesa: {int(dados['DEF lvl 50'].mean())}
+                    - Inteligencia: {int(dados['INT lvl 50'].mean())}
+                    - Velocidade: {int(dados['SPD lvl 50'].mean())}
+                    """)
+                
+                elif "quantos" in pergunta_lower or "total" in pergunta_lower:
+                    st.info(f"No total, existem **{len(dados)}** Digimons no dataset.")
+                
+                else:
+                    st.info("""
+                    **Nao entendi sua pergunta.**
+                    
+                    Tente perguntar sobre:
+                    - Digimons mais fortes
+                    - Digimons mais rapidos
+                    - Digimons com maior defesa
+                    - O Agumon
+                    - Medias de estatisticas
+                    - Total de Digimons
+                    """)
         else:
-            st.warning("Digite uma pergunta.")
+            st.warning("Digite uma pergunta primeiro.")
